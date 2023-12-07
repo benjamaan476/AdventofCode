@@ -2,155 +2,309 @@
 #include <array>
 #include <ranges>
 #include <string>
+#include <vector>
+#include <set>
 #include "../../utils/FileParser.h"
+
+enum type
+{
+	high_card,
+	one_pair,
+	two_pair,
+	three_of_a_kind,
+	full_house,
+	four_of_a_kind,
+	five_of_a_kind,
+};
+
+int rank_to_number(int rank)
+{
+	if (std::isdigit(rank))
+	{
+		// part 1
+		//return rank - 2 - '0';
+		// part 2
+		return rank - 1 - '0';
+	}
+	else
+	{
+		switch (rank)
+		{
+		case 'A':
+			return 12;
+		case 'K':
+			return 11;
+		case 'Q':
+			return 10;
+		case 'J':
+			//part 1
+			//return 9;
+			// part 2
+			return 0;
+		case 'T':
+			return 9;
+		default:
+			return -1;
+		}
+	}
+}
+
+struct hand
+{
+	std::string hand_s{};
+	std::vector<int> ranks{};
+	type type{};
+
+	hand(const std::string& hand) : hand_s{ hand }
+	{
+		ranks = std::vector<int>(13, 0);
+		for (const auto& card : hand)
+		{
+			auto val = rank_to_number(card);
+			ranks[val]++;
+		}
+
+		type = get_type();
+
+	}
+
+	/*
+	type get_type() const
+	{
+		if (std::any_of(ranks.begin(), ranks.end(), [](int rank) { return rank == 5; }))
+		{
+			return type::five_of_a_kind;
+		}
+
+		if (std::any_of(ranks.begin(), ranks.end(), [](int rank) { return rank == 4; }))
+		{
+			return type::four_of_a_kind;
+		}
+
+		if (std::ranges::any_of(ranks, [](int rank) { return rank == 3; }) && std::ranges::any_of(ranks, [](int rank) { return rank == 2;}))
+		{
+			return type::full_house;
+		}
+
+		if (std::any_of(ranks.begin(), ranks.end(), [](int rank) { return rank == 3; }))
+		{
+			return type::three_of_a_kind;
+		}
+
+		if(std::ranges::count_if(ranks, [](int rank) { return rank == 2; }) == 2)
+		{
+			return type::two_pair;
+		}
+
+		if (std::any_of(ranks.begin(), ranks.end(), [](int rank) { return rank == 2; }))
+		{
+			return type::one_pair;
+		}
+
+		return type::high_card;
+	}
+	*/
+
+	::type get_type() const
+	{
+		if (std::ranges::any_of(ranks, [](int rank) { return rank == 5; }))
+		{
+			return type::five_of_a_kind;
+		}
+
+		if (std::ranges::any_of(ranks, [](int rank) { return rank == 4; }))
+		{
+			if (ranks[0] == 1)
+			{
+				return type::five_of_a_kind;
+			}
+			// missed this case
+			else if (ranks[0] == 4)
+			{
+				return type::five_of_a_kind;
+			}
+				return type::four_of_a_kind;
+		}
+
+		if (std::ranges::any_of(ranks, [](int rank) { return rank == 3; }) && std::ranges::any_of(ranks, [](int rank) { return rank == 2;}))
+		{
+			if (ranks[0])
+			{
+				if (ranks[0] == 2)
+				{
+				return type::five_of_a_kind;
+				}
+				else if (ranks[0] == 3)
+				{
+					return type::five_of_a_kind;
+				}
+			}
+
+			return type::full_house;
+		}
+
+		
+		if (std::ranges::any_of(ranks, [](int rank) { return rank == 3; }))
+		{
+			if (ranks[0])
+			{
+				if (ranks[0] == 1)
+				{
+					return type::four_of_a_kind;
+				}
+				else if (ranks[0] == 3)
+				{
+					return type::four_of_a_kind;
+				}
+			}
+
+			return type::three_of_a_kind;
+		}
+
+		if(std::ranges::count_if(ranks, [](int rank) { return rank == 2; }) == 2)
+		{
+			if (ranks[0])
+			{
+				if (ranks[0] == 1)
+				{
+					return type::full_house;
+				}
+				else if (ranks[0] == 2)
+				{
+					return type::four_of_a_kind;
+				}
+			}
+			return type::two_pair;
+		}
+
+		if (std::any_of(ranks.begin(), ranks.end(), [](int rank) { return rank == 2; }))
+		{
+			if (ranks[0])
+			{
+				if (ranks[0] == 1)
+				{
+					return type::three_of_a_kind;
+				}
+				else if(ranks[0] == 2)
+				{
+					return type::three_of_a_kind;
+				}
+			}
+
+			return type::one_pair;
+
+		}
+		
+		if (ranks[0])
+		{
+			if (ranks[0] == 1)
+			{
+				return type::one_pair;
+			}
+		}
+		return type::high_card;
+
+	}
+
+	friend	bool operator<(const hand& lhs, const hand& rhs)
+	{
+		auto lhs_type = lhs.type;
+		auto rhs_type = rhs.type;
+
+		if (lhs_type != rhs_type)
+		{
+			return lhs.type < rhs.type;
+		}
+
+		for (auto i{ 0 }; i < lhs.hand_s.size(); ++i)
+		{
+			auto lhs_val = rank_to_number(lhs.hand_s[i]);
+			auto rhs_val = rank_to_number(rhs.hand_s[i]);
+
+			if (lhs_val != rhs_val)
+			{
+				return lhs_val < rhs_val;
+			}
+		}
+
+		return false;
+	}
+};
+
+struct game
+{
+	hand hand;
+	int bid{};
+
+	friend bool operator<(const game& lhs, const game& rhs)
+	{
+		return lhs.hand < rhs.hand;
+	}
+};
+
 
 
 void part_1()
 {
+	LineParser parser{ "in.txt" };
+	int32_t count{};
 
-	int32_t count{ 1 };
+	std::vector<game> games{};
+	std::set<game> games_set{};
 
-	std::vector<int> times{};
-	std::vector<int> distances{};
-
-	FILE* f{};
-	fopen_s(&f, "in.txt", "r");
-	if (f)
+	while (const auto& line = parser.next())
 	{
-		char buffer[512];
-		fgets(buffer, sizeof(buffer), f);
-
-		std::string time_string = buffer;
-		time_string = time_string.substr(time_string.find_first_of(':') + 1);
-
+		if (line.has_value() && !line->empty())
 		{
-			std::istringstream ss{ time_string };
-			int time{};
-			while (ss >> time)
-			{
-				times.push_back(time);
-			}
+			std::istringstream ss{ *line };
+			std::string hand{};
+			int bid{};
+			ss >> hand >> bid;
+
+			games.emplace_back(hand, bid);
+			games_set.emplace(hand, bid);
+
 		}
-
-		fgets(buffer, sizeof(buffer), f);
-
-		std::string distance_string = buffer;
-		distance_string = distance_string.substr(distance_string.find_first_of(':') + 1);
-
-		{
-			std::istringstream ss{ distance_string };
-			int distance{};
-			while (ss >> distance)
-			{
-				distances.push_back(distance);
-			}
-		}
-
-		fclose(f);
 	}
 
-	for (auto i{ 0 }; i < times.size(); ++i)
+	int game_count = 1;
+	for (const auto& game : games_set)
 	{
-		const auto& race_time = times[i];
-		const auto& best_distance = distances[i];
-
-		int time{};
-		int winning_times{};
-
-		while (++time < race_time)
-		{
-			int distance = (race_time - time) * time;
-			if (distance > best_distance)
-			{
-				winning_times++;
-			}
-		}
-
-		count *= winning_times;
+		count += game_count * game.bid;
+		game_count++;
 	}
+
 	std::cout << count << std::endl;
 }
 
 void part_2()
 {
+	LineParser parser{ "in.txt" };
+	int64_t count{};
 
-	int64_t count{ 1 };
+	std::set<game> games_set{};
 
-	std::vector<std::string> times{};
-	std::vector<std::string> distances{};
-
-	FILE* f{};
-	fopen_s(&f, "in.txt", "r");
-	if (f)
+	while (const auto& line = parser.next())
 	{
-		char buffer[512];
-		fgets(buffer, sizeof(buffer), f);
-
-		std::string time_string = buffer;
-		time_string = time_string.substr(time_string.find_first_of(':') + 1);
-
+		if (line.has_value() && !line->empty())
 		{
-			std::istringstream ss{ time_string };
-			std::string time{};
-			while (ss >> time)
-			{
-				times.push_back(time);
-			}
+			std::istringstream ss{ *line };
+			std::string hand{};
+			int bid{};
+			ss >> hand >> bid;
+
+			games_set.emplace(hand, bid);
+
 		}
-
-
-		fgets(buffer, sizeof(buffer), f);
-
-		std::string distance_string = buffer;
-		distance_string = distance_string.substr(distance_string.find_first_of(':') + 1);
-
-		{
-			std::istringstream ss{ distance_string };
-			std::string distance{};
-			while (ss >> distance)
-			{
-				distances.push_back(distance);
-			}
-		}
-
-		fclose(f);
 	}
 
-		std::string total_time{};
-
-		for (const auto& time : times)
-		{
-			total_time += time;
-		}
-
-		std::string total_distance{};
-
-		for (const auto& distance : distances)
-		{
-			total_distance += distance;
-		}
-	//	for (auto i{0}; i < times.size(); ++i)
+	int game_count = 1;
+	for (const auto& game : games_set)
 	{
-		//		const auto& race_time = times[i];
-		//		const auto& best_distance = distances[i];
-
-		int64_t time{};
-		int64_t winning_times{};
-		auto race_time = std::stoi(total_time);
-		auto best_distance = strtoll(total_distance.c_str(), NULL, 10);
-		
-		while (++time < race_time)
-		{
-			int64_t distance = (race_time - time) * time;
-
-			if (distance > best_distance)
-			{
-				winning_times++;
-			}
-		}
-
-		count *= winning_times;
+		count += game_count * game.bid;
+		game_count++;
 	}
+
 	std::cout << count << std::endl;
 }
 

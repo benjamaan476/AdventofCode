@@ -3,8 +3,18 @@
 #
 cmake_minimum_required (VERSION 3.16)
 
+project ("1")
+project ("2")
+project ("3")
+project ("4")
+project ("5")
 project ("6")
 project ("7")
 # Include sub-projects.
+add_subdirectory ("1")
+add_subdirectory ("2")
+add_subdirectory ("3")
+add_subdirectory ("4")
+add_subdirectory ("5")
 add_subdirectory ("6")
 add_subdirectory ("7")

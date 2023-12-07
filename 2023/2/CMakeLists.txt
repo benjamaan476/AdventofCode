@@ -3,7 +3,7 @@
 #
 cmake_minimum_required (VERSION 3.16)
 
-set(PROJECT_NAME 7)
+set(PROJECT_NAME 2)
 
 #find_package(glm CONFIG REQUIRED)
 #find_package(glfw3 CONFIG REQUIRED)
