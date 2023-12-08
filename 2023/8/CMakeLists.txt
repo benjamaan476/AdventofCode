@@ -17,11 +17,7 @@ add_compile_definitions(_PROJECT_DIR_="${CMAKE_CURRENT_SOURCE_DIR}")
 # Add source to this project's executable.
 add_executable (${PROJECT_NAME} "main.cpp")
 
-add_custom_command(
-    TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${PROJECT_SOURCE_DIR}/${PROJECT_NAME}/in.txt" "${CMAKE_BINARY_DIR}/2023/${PROJECT_NAME}/in.txt"
-    COMMAND_EXPAND_LISTS
-  )
+configure_file("in.txt.in" "${CMAKE_BINARY_DIR}/2023/${PROJECT_NAME}/in.txt" ESCAPE_QUOTES)
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)
   set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 20)
