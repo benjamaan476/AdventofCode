@@ -5,6 +5,7 @@
 #include <vector>
 #include <set>
 #include <map>
+#include <numeric>
 #include "../../utils/FileParser.h"
 
 struct node
@@ -104,7 +105,23 @@ void part_1()
 	count = steps;
 	std::cout << count << std::endl;
 }
+int64_t gcd(int64_t a, int64_t b)
+{
+	for (;;)
+	{
+		if (a == 0) return b;
+		b %= a;
+		if (b == 0) return a;
+		a %= b;
+	}
+}
 
+int64_t lcm(int64_t a, int64_t b)
+{
+	int64_t temp = gcd(a, b);
+
+	return temp ? (a / temp * b) : 0;
+}
 void part_2()
 {
 	int64_t count{};
@@ -114,6 +131,7 @@ void part_2()
 	FILE* f{};
 	fopen_s(&f, "in.txt", "r");
 	std::string instructions{};
+	std::vector<node*> start_nodes{};
 
 	if (f)
 	{
@@ -143,6 +161,7 @@ void part_2()
 			node->is_star = node_name[2] == 'A';
 			node->is_end = node_name[2] == 'Z';
 
+
 			if (nodes.contains(left))
 			{
 				node->left = &nodes[left];
@@ -162,52 +181,50 @@ void part_2()
 				auto pair = nodes.emplace(right, right);
 				node->right = &pair.first->second;
 			}
+
+			if (node->is_star)
+			{
+				start_nodes.push_back(node);
+			}
+
 		}
 		fclose(f);
 	}
 
-	std::vector<node*> start_nodes{};
-	std::set<std::string> end_nodes{};
-	for (auto& [name, node] : nodes)
-	{
-		if (node.is_star)
-		{
-			start_nodes.push_back(&node);
-		}
-
-		if (node.is_end)
-		{
-			end_nodes.emplace(name);
-		}
-	}
-
+	std::vector<int64_t> founds(start_nodes.size());
 	std::vector<node*> next_nodes = start_nodes;
-	int64_t steps{};
-	bool found{};
-	while (!found)
+	for (auto i{ 0 }; i < next_nodes.size(); ++i)
 	{
-		for (const auto& step : instructions)
+		int64_t steps{};
+		bool found{};
+		while (!found)
 		{
-			if (step == '\n')
-			{
-				continue;
-			}
 
-			++steps;
-
-			for (auto i{ 0 }; i < next_nodes.size(); ++i)
+			for (const auto& step : instructions)
 			{
+				if (step == '\n')
+				{
+					continue;
+				}
+
+				++steps;
+
 				next_nodes[i] = (step == 'L') ? next_nodes[i]->left : (step == 'R') ? next_nodes[i]->right : next_nodes[i];
-			}
+				//std::cout << next_nodes[i]->is_end;
 
-			if (std::ranges::all_of(next_nodes, [&](auto node) { return end_nodes.contains(node->name); }))
-			{
-				found = true;
-				break;
+			//std::cout << '\r';
+				if (next_nodes[i]->is_end)
+				{
+					founds[i] = steps;
+					found = true;
+					break;
+				}
 			}
 		}
 	}
-	count = steps;
+
+
+	count = (int64_t)std::accumulate(founds.begin(), founds.end(), (int64_t)1, lcm);
 	std::cout << count << std::endl;
 }
 
