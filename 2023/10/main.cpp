@@ -16,6 +16,7 @@ struct pipe
 	char type{};
 	int8_t connections{};
 	int32_t distance{};
+	bool is_loop{};
 	bool is_internal{};
 
 	pipe(char type)
@@ -146,6 +147,21 @@ void clear_map(std::vector<std::vector<pipe>>& map)
 	}
 }
 
+void remove_non_loop(std::vector<std::vector<pipe>>& map)
+{
+	for (auto& row : map)
+	{
+		for (auto& pipe : row)
+		{
+			if (!pipe.is_loop)
+			{
+				pipe.type = '.';
+				pipe.connections = 0;
+			}
+		}
+	}
+}
+
 void draw_map(const std::vector<std::vector<pipe>>& map)
 {
 	for (const auto& row : map)
@@ -246,7 +262,7 @@ int32_t walk_map(std::vector<std::vector<pipe>>& map, int start_x, int start_y)
 	int second_y = start_y;
 
 	auto* p = &map[start_y][start_x];
-
+	p->is_loop = true;
 	int distance{};
 
 	int8_t previous_first{};
@@ -294,6 +310,7 @@ int32_t walk_map(std::vector<std::vector<pipe>>& map, int start_x, int start_y)
 		++distance;
 		if (next_first->distance == 0)
 		{
+			next_first->is_loop = true;
 			next_first->distance = distance;
 		}
 		else
@@ -303,6 +320,7 @@ int32_t walk_map(std::vector<std::vector<pipe>>& map, int start_x, int start_y)
 
 		if (next_second->distance == 0)
 		{
+			next_second->is_loop = true;
 			next_second->distance = distance;
 		}
 		else
@@ -324,10 +342,15 @@ int32_t spin_map(std::vector<std::vector<pipe>>& map)
 		{
 			int xx = x;
 			int left_count{};
-			while (--xx >= 0)
+			int yy = y;
+			while (--xx >= 0 && ++yy <= map.size() - 1)
 			{
-				left_count += (row[xx].type != '-' && row[xx].type != '.') ? 1 : 0;
+				left_count += (map[yy][xx].type == '-' || map[yy][xx].type == '|' || map[yy][xx].type == '7' || map[yy][xx].type == 'L') ? 1 : 0;
 			}
+		//	while (--xx >= 0)
+			//{
+				//left_count += (row[xx].type != '-' && row[xx].type != '.') ? 1 : 0;
+			//}
 
 			int right_count{};
 			xx = x;
@@ -338,7 +361,6 @@ int32_t spin_map(std::vector<std::vector<pipe>>& map)
 			}
 
 			int up_count{};
-			int yy = y;
 
 			while (--yy >= 0)
 			{
@@ -353,11 +375,12 @@ int32_t spin_map(std::vector<std::vector<pipe>>& map)
 				down_count += (r[x].type != '|' && r[x].type != '.') ? 1 : 0;
 			}
 
-			auto counts = { up_count , down_count, right_count , left_count };
+
+			auto counts = { up_count , down_count, right_count};
 			auto outer = std::ranges::any_of(counts, [](int count) { return count == 0; });
 			//outer |= std::ranges::all_of(counts, [](int count) { return (count % 2 == 0) ; });
 			//outer |= std::ranges::all_of(counts, [](int count) { return (count % 2 == 0); });
-			if (!outer && row[x].distance == 0)
+			if (!outer && (left_count % 2 == 1) && !row[x].is_loop)
 			{
 				row[x].is_internal = true;
 				++inner_count;
@@ -439,13 +462,14 @@ void part_2()
 
 	//draw_map(map);
 	clear_map(map);
-	//clear_map(map);
-	//clear_map(map);
-	//clear_map(map);
+	clear_map(map);
+	clear_map(map);
+	clear_map(map);
 	//clear_map(map);
 	draw_map(map);
 
 	count = walk_map(map, start_x, start_y);
+	remove_non_loop(map);
 	//draw_map_distance(map);
 
 	count = spin_map(map);
