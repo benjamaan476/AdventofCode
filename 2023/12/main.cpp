@@ -76,11 +76,10 @@ int process_row(const row& row)
 
 	regex_string.push_back('$');
 
-	for (int gap_index{}; gap_index < gaps.size(); ++gap_index)
+	for (int gap_index{1}; gap_index < gaps.size() - 1; ++gap_index)
 	{
-		for (int increment_index = 0; increment_index <= gap_index; ++increment_index)
+		for (;;)
 		{
-			for (int another_index{}; another_index < gaps.size(); another_index)
 			{
 				int group_count = std::accumulate(row.groups.begin(), row.groups.end(), 0);
 				int gap_count = std::accumulate(gaps.begin(), gaps.end(), 0);
@@ -89,47 +88,66 @@ int process_row(const row& row)
 				{
 					break;
 				}
-
-				int& current_gap = gaps[0];
-
-				do
+			}
+			for (int increment_index = 0; increment_index < gap_index; ++increment_index)
+			{
+				for (;;)
 				{
-					std::string match = build_match(row, gaps);
+					int group_count = std::accumulate(row.groups.begin(), row.groups.end(), 0);
+					int gap_count = std::accumulate(gaps.begin(), gaps.end(), 0);
 
-
-					if (match.size() > row.data.size())
+					if (group_count + gap_count > row.data.size())
 					{
 						break;
 					}
 
-					pad_match(match, (int)row.data.size());
-
-					std::regex regex{regex_string};
-					std::smatch base_match;
-					if (std::regex_match(match, base_match, regex))
+					do
 					{
-						count++;
-					}
-				} while (++current_gap);
-				current_gap = 0;
-				if (another_index + 1 >= gaps.size())
-				{
-					break;
-				}
-				gaps[another_index + 1]++;
-			}
-			int index = gap_index + 1;
-			while (index-- >= 1)
-			{
-				gaps[index] = 1;
-			}
-			gaps[0] = 0;
-			if (gap_index + increment_index + 2 >= gaps.size())
-			{
-				break;
-			}
-			gaps[gap_index + increment_index + 2]++;
+						std::string match = build_match(row, gaps);
 
+
+						if (match.size() > row.data.size())
+						{
+							break;
+						}
+
+						pad_match(match, (int)row.data.size());
+
+						std::regex regex{regex_string};
+						std::smatch base_match;
+						if (std::regex_match(match, base_match, regex))
+						{
+							count++;
+						}
+					} while (++gaps[0]);
+					gaps[0] = 0;
+					gaps[increment_index + 1]++;
+					//if (another_index + 1 >= gaps.size())
+					//{
+					//	break;
+					//}
+					//gaps[increment_index + 1]++;
+				}
+				int index = increment_index + 1;
+				do
+				{
+					gaps[index] = 1;
+				} while (index--);
+				gaps[0] = 0;
+				//int index = gap_index + 1;
+				//while (index-- >= 1)
+				//{
+				//	gaps[index] = 1;
+				//}
+				//gaps[0] = 0;
+				//if (gap_index + increment_index + 2 >= gaps.size())
+				//{
+				//	break;
+				//}
+				//gaps[gap_index + increment_index + 2]++;
+
+			}
+			gaps[gap_index + 1]++;
 		}
 	}
 	std::cout << count << std::endl;
@@ -167,7 +185,7 @@ void part_1()
 		count += process_row(row);
 	}
 
-	//std::cout << count << std::endl;
+	std::cout << count << std::endl;
 }
 
 void part_2()
