@@ -6,150 +6,93 @@
 #include <set>
 #include <regex>
 #include <numeric>
+#include <map>
 #include "../../utils/FileParser.h"
+#include "../../utils/string_stuff.h"
 
+using memo = std::pair<size_t, size_t>;
+using memo_map = std::map<memo, size_t>;
 
-constexpr static const char delim = '0';
+constexpr static const char delim = '.';
 
 struct row
 {
 	std::string data{};
-	std::vector<int> groups{};
+	std::vector<size_t> groups{};
 };
 
-std::string build_match(const row& row, const std::vector<int>& gaps)
+bool matches2(const std::string& input, size_t pos, size_t len)
 {
-	std::string match{};
-	for (int i{}; i < gaps.size(); ++i)
-	{
-		int gap = gaps[i];
-		int group_size = row.groups[i];
-
-		while (gap--)
-		{
-			match.push_back(delim);
-		}
-
-		while (group_size--)
-		{
-			match.push_back('#');
-		}
-
-
-	}
-
-	return match;
+    // Ensure that the preceding character can be a . (need . or ?)
+    if ((pos > 0) && (input[pos-1] == '#')) return false;
+    // Can't match if the group overruns the input
+    if ((pos + len) > input.size()) return false;
+    // Ensure that the group items can all be # (need # or ?)
+    for (int i = 0; i < len; ++i) if (input[pos+i] == '.') return false;   
+    // If we are the end of the input there is no need for a following .
+    if ((pos + len) == input.size()) return true;
+    // Ensure that the following character can be a . (need . or ?)
+    return (input[pos + len] != '#');
 }
 
-void pad_match(std::string& match, int size)
+size_t calculate(const std::string& input, const std::vector<size_t>& groups, size_t pos, size_t grp, memo_map& memo_map)
 {
-	while (match.size() < size)
-	{
-		match.push_back(delim);
-	}
+ memo memo = std::make_pair(pos, grp);
+    if (memo_map.find(memo) != memo_map.end()) return memo_map[memo];
+
+    if (grp >= groups.size())
+    {
+        for (auto p: range(pos, input.size())) 
+            if (input[p] == '#') return 0;
+        return 1;
+    }
+
+    size_t result = 0;
+    while (pos < input.size())
+    {
+        if (matches2(input, pos, groups[grp]))
+        {
+            result += calculate(input, groups, pos + groups[grp] + 1, grp + 1, memo_map);
+        }
+
+        if (input[pos] == '#') break;
+        ++pos;
+    }
+
+    memo_map[memo] = result;
+    return result;
 }
 
-int process_row(const row& row)
+size_t calculate(const row& row)
 {
-	int count{};
+	std::ostringstream os;
+	os << "\\.*";
 
-	auto num_groups = row.groups.size();
-	std::vector<int> gaps(num_groups, 1);
-	gaps[0] = 0;
-	std::string regex_string{"^"};
-
-	for (const char datum : row.data)
+	for (auto c : row.groups)
 	{
-		if (datum == '?')
+		for (auto d : range(c))
 		{
-			regex_string.push_back('[');
-			regex_string.push_back(delim);
-			regex_string.push_back('|');
-			regex_string.push_back('#');
-			regex_string.push_back(']');
-		}
-		else
-		{
-			regex_string.push_back(datum);
-		}
-	}
-
-	regex_string.push_back('$');
-
-	for (int gap_index{1}; gap_index < gaps.size() - 1; ++gap_index)
-	{
-		for (;;)
-		{
+			if (d)
 			{
-				int group_count = std::accumulate(row.groups.begin(), row.groups.end(), 0);
-				int gap_count = std::accumulate(gaps.begin(), gaps.end(), 0);
-
-				if (group_count + gap_count > row.data.size())
-				{
-					break;
-				}
-			}
-			for (int increment_index = 0; increment_index < gap_index; ++increment_index)
-			{
-				for (;;)
-				{
-					int group_count = std::accumulate(row.groups.begin(), row.groups.end(), 0);
-					int gap_count = std::accumulate(gaps.begin(), gaps.end(), 0);
-
-					if (group_count + gap_count > row.data.size())
-					{
-						break;
-					}
-
-					do
-					{
-						std::string match = build_match(row, gaps);
-
-
-						if (match.size() > row.data.size())
-						{
-							break;
-						}
-
-						pad_match(match, (int)row.data.size());
-
-						std::regex regex{regex_string};
-						std::smatch base_match;
-						if (std::regex_match(match, base_match, regex))
-						{
-							count++;
-						}
-					} while (++gaps[0]);
-					gaps[0] = 0;
-					gaps[increment_index + 1]++;
-					//if (another_index + 1 >= gaps.size())
-					//{
-					//	break;
-					//}
-					//gaps[increment_index + 1]++;
-				}
-				int index = increment_index + 1;
-				do
-				{
-					gaps[index] = 1;
-				} while (index--);
-				gaps[0] = 0;
-				//int index = gap_index + 1;
-				//while (index-- >= 1)
-				//{
-				//	gaps[index] = 1;
-				//}
-				//gaps[0] = 0;
-				//if (gap_index + increment_index + 2 >= gaps.size())
-				//{
-				//	break;
-				//}
-				//gaps[gap_index + increment_index + 2]++;
 
 			}
-			gaps[gap_index + 1]++;
-		}
+			os << '#';
+}
+		os << "\\.+";
 	}
+
+	auto corrupt = row.data + ".";
+	
+	memo_map map;
+	return calculate(corrupt, row.groups, 0, 0, map);
+}
+
+size_t process_row(const row& row)
+{
+	size_t count{};
+
+	count = calculate(row);
+
 	std::cout << count << std::endl;
 	return count;
 }
@@ -157,7 +100,7 @@ int process_row(const row& row)
 void part_1()
 {
 	LineParser parser{ "in.txt" };
-	int32_t count{};
+	size_t count{};
 
 	std::vector<row> rows{};
 	while (const auto& line = parser.next())
@@ -166,16 +109,22 @@ void part_1()
 		{
 			std::string data{};
 			std::string group{};
-			std::vector<int> groups{};
+			std::vector<size_t> groups{};
 
-			std::istringstream ss{*line};
+			std::istringstream ss{ *line };
 			ss >> data;
-			while (std::getline(ss, group, ','))
+
+			std::string non{};
+			ss >> non;
+
+			std::stringstream rr{};
+			rr << non << "," << non << "," << non << "," << non << "," << non;
+			while (std::getline(rr, group, ','))
 			{
 				groups.push_back(std::stoi(group));
 			}
 
-			std::ranges::replace(data, '.', delim);
+			data = data + "?" + data + "?" + data + "?" + data + "?" + data;
 			rows.emplace_back(data, groups);
 		}
 	}
