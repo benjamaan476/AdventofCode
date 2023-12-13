@@ -4,116 +4,152 @@
 #include <string>
 #include <vector>
 #include <set>
+#include <regex>
 #include <numeric>
 #include "../../utils/FileParser.h"
 
+
+constexpr static const char delim = '0';
+
 struct row
 {
-	std::string springs{};
+	std::string data{};
 	std::vector<int> groups{};
 };
 
-int count_possibilities(const std::vector<char>& springs, const std::vector<int>& groups)
+std::string build_match(const row& row, const std::vector<int>& gaps)
 {
-	int count{};
-
-	if (std::ranges::all_of(springs, [](char spring) { return spring == '#'; }))
+	std::string match{};
+	for (int i{}; i < gaps.size(); ++i)
 	{
-		return 0;
+		int gap = gaps[i];
+		int group_size = row.groups[i];
+
+		while (gap--)
+		{
+			match.push_back(delim);
+		}
+
+		while (group_size--)
+		{
+			match.push_back('#');
+		}
+
+
 	}
 
-	const auto group_sum = std::accumulate(groups.begin(), groups.end(), 0);
-	
-
-	if (springs.size() == groups.size())
-	{
-		return 1;
-	}
-
-
-	if (springs.size() == group_sum)
-	{
-		return 1;
-	}
-
-	if (groups.size() == 1)
-	{
-		return (int)springs.size();
-	}
-
-	if (springs.size() == group_sum + 1 && groups.size() == 1)
-	{
-		return 2;
-	}
-	 
-	if (springs.size() == group_sum + 1)
-	{
-		return 1;
-	}
-
-	if (springs.size() == group_sum + groups.size() - 1)
-	{
-		return 1;
-	}
-
-	return count;
+	return match;
 }
 
-int process_row(row& row)
+void pad_match(std::string& match, int size)
 {
-	if (row.springs.find_first_of('?') == std::string::npos)
+	while (match.size() < size)
 	{
-		return 0;
+		match.push_back(delim);
 	}
+}
 
+int process_row(const row& row)
+{
 	int count{};
-	std::vector<std::vector<char>> damaged_springs(1);
-	for (const char datum : row.springs)
+
+	auto num_groups = row.groups.size();
+	std::vector<int> gaps(num_groups, 1);
+	gaps[0] = 0;
+	std::string regex_string{"^"};
+
+	for (const char datum : row.data)
 	{
-		if (datum == '.')
+		if (datum == '?')
 		{
-			damaged_springs.push_back({});
+			regex_string.push_back('[');
+			regex_string.push_back(delim);
+			regex_string.push_back('|');
+			regex_string.push_back('#');
+			regex_string.push_back(']');
 		}
 		else
 		{
-			damaged_springs.back().push_back(datum);
+			regex_string.push_back(datum);
 		}
-
 	}
-	std::erase_if(damaged_springs, [](auto spring) { return spring.empty(); });
 
-	for (auto damaged_spring_iterator = damaged_springs.begin(); damaged_spring_iterator != damaged_springs.end();)
+	regex_string.push_back('$');
+
+	for (int gap_index{1}; gap_index < gaps.size() - 1; ++gap_index)
 	{
-		auto spring_group = *damaged_spring_iterator;
-		std::vector<int> groups{};
-		int total{};
-		int group_size = (int)spring_group.size();
-		bool erased{};
-		for (auto group_iterator = row.groups.begin(); group_iterator != row.groups.end();)
+		for (;;)
 		{
-			auto group = *group_iterator;
-			if (total + group <= group_size)
 			{
-				groups.push_back(group);
-				total += group + 1;
-				++group_iterator;
+				int group_count = std::accumulate(row.groups.begin(), row.groups.end(), 0);
+				int gap_count = std::accumulate(gaps.begin(), gaps.end(), 0);
+
+				if (group_count + gap_count > row.data.size())
+				{
+					break;
+				}
 			}
-			else
+			for (int increment_index = 0; increment_index < gap_index; ++increment_index)
 			{
-				count += count_possibilities(spring_group, groups);
-				group_iterator = row.groups.erase(row.groups.begin(), row.groups.begin() + groups.size());
-				damaged_spring_iterator = damaged_springs.erase(damaged_springs.begin());
-				erased = true;
-				break;
+				for (;;)
+				{
+					int group_count = std::accumulate(row.groups.begin(), row.groups.end(), 0);
+					int gap_count = std::accumulate(gaps.begin(), gaps.end(), 0);
+
+					if (group_count + gap_count > row.data.size())
+					{
+						break;
+					}
+
+					do
+					{
+						std::string match = build_match(row, gaps);
+
+
+						if (match.size() > row.data.size())
+						{
+							break;
+						}
+
+						pad_match(match, (int)row.data.size());
+
+						std::regex regex{regex_string};
+						std::smatch base_match;
+						if (std::regex_match(match, base_match, regex))
+						{
+							count++;
+						}
+					} while (++gaps[0]);
+					gaps[0] = 0;
+					gaps[increment_index + 1]++;
+					//if (another_index + 1 >= gaps.size())
+					//{
+					//	break;
+					//}
+					//gaps[increment_index + 1]++;
+				}
+				int index = increment_index + 1;
+				do
+				{
+					gaps[index] = 1;
+				} while (index--);
+				gaps[0] = 0;
+				//int index = gap_index + 1;
+				//while (index-- >= 1)
+				//{
+				//	gaps[index] = 1;
+				//}
+				//gaps[0] = 0;
+				//if (gap_index + increment_index + 2 >= gaps.size())
+				//{
+				//	break;
+				//}
+				//gaps[gap_index + increment_index + 2]++;
+
 			}
-		}
-		 
-		if (!erased)
-		{
-			++damaged_spring_iterator;
+			gaps[gap_index + 1]++;
 		}
 	}
-
 	std::cout << count << std::endl;
 	return count;
 }
@@ -124,31 +160,27 @@ void part_1()
 	int32_t count{};
 
 	std::vector<row> rows{};
-
 	while (const auto& line = parser.next())
 	{
 		if (line.has_value() && !line->empty())
 		{
-			const std::string val = *line;
-
-			std::vector<int> groups{};
-			std::string row{};
+			std::string data{};
 			std::string group{};
+			std::vector<int> groups{};
 
+			std::istringstream ss{*line};
+			ss >> data;
+			while (std::getline(ss, group, ','))
 			{
-				std::istringstream ss{ val };
-				ss >> row;
-
-				while (std::getline(ss, group, ','))
-				{
-					groups.push_back(std::stoi(group));
-				}
+				groups.push_back(std::stoi(group));
 			}
-			rows.emplace_back(row, groups);
+
+			std::ranges::replace(data, '.', delim);
+			rows.emplace_back(data, groups);
 		}
 	}
 
-	for (auto& row : rows)
+	for (const auto& row : rows)
 	{
 		count += process_row(row);
 	}
