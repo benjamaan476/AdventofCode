@@ -209,11 +209,22 @@ void part_1()
 	std::cout << count << std::endl;
 }
 
+struct point
+{
+	int x{};
+	int y{};
+
+	int operator+(const point& other) const
+	{
+		return x * other.y - y * other.x;
+	}
+};
+
 void part_2()
 {
 	LineParser parser{ "in.txt" };
-	size_t count{};
-	std::vector<std::pair<int, int>> coords{};
+	//size_t count{};
+	std::vector<point> coords{};
 	int boundary_length{};
 
 	int x_location{0};
@@ -231,23 +242,27 @@ void part_2()
 			std::string colour{};
 			ss >> direction >> length >> colour;
 
-			std::string hex_string(colour.data() + 2, colour.data() + 7);
-			std::istringstream sss{ hex_string };
-			sss >> std::hex >> length;
+			//std::string hex_string(colour.data() + 2, colour.data() + 7);
+			//std::istringstream sss{ hex_string };
+			//sss >> std::hex >> length;
 
-			direction = colour[colour.size() - 2];
+			//direction = colour[colour.size() - 2];
 
 			switch (direction)
 			{
+			case 'R':
 			case '0':
 				x_location += length;
 				break;
+			case 'U':
 			case '3':
 				y_location -= length;
 				break;
 			case '1':
+			case 'D':
 				y_location += length;
 				break;
+			case 'L':
 			case '2':
 				x_location -= length;
 				break;
@@ -260,15 +275,18 @@ void part_2()
 		}
 	}
 
+	//coords.pop_back();
 	size_t area{};
-	std::vector<int> partial_sum(coords.size() + 1);
 
-	std::adjacent_difference(coords.begin(), coords.end(), partial_sum.begin(), [](auto pair_one, auto pair_two) -> int { return pair_one.first * pair_two.second - pair_one.second * pair_two.first; });
-	int last = coords.front().first * coords.back().second - coords.front().second * coords.back().first;
-	partial_sum.push_back(last);
-	area = std::ranges::count(partial_sum, 0);
+	for (int i{}; i < coords.size() - 1; ++i)
+	{
+		area += coords[i] + coords[i + 1];
+	}
+
 	area /= 2;
-	std::cout << count << std::endl;
+
+	size_t interior = area + 1 + boundary_length / 2;
+	std::cout << interior << std::endl;
 }
 
 int main()
