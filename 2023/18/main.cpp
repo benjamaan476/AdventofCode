@@ -211,10 +211,10 @@ void part_1()
 
 struct point
 {
-	int x{};
-	int y{};
+	uint64_t x{};
+	uint64_t y{};
 
-	int operator+(const point& other) const
+	uint64_t operator+(const point& other) const
 	{
 		return x * other.y - y * other.x;
 	}
@@ -225,10 +225,10 @@ void part_2()
 	LineParser parser{ "in.txt" };
 	//size_t count{};
 	std::vector<point> coords{};
-	int boundary_length{};
+	uint64_t boundary_length{};
 
-	int x_location{0};
-	int y_location{0};
+	uint64_t x_location{0};
+	uint64_t y_location{0};
 
 	coords.emplace_back(x_location, y_location);
 
@@ -238,15 +238,15 @@ void part_2()
 		{
 			std::istringstream ss{ *line };
 			char direction{};
-			int length{};
+			uint64_t length{};
 			std::string colour{};
 			ss >> direction >> length >> colour;
 
-			//std::string hex_string(colour.data() + 2, colour.data() + 7);
-			//std::istringstream sss{ hex_string };
-			//sss >> std::hex >> length;
+			std::string hex_string(colour.data() + 2, colour.data() + 7);
+			std::istringstream sss{ hex_string };
+			sss >> std::hex >> length;
 
-			//direction = colour[colour.size() - 2];
+			direction = colour[colour.size() - 2];
 
 			switch (direction)
 			{
@@ -275,8 +275,7 @@ void part_2()
 		}
 	}
 
-	//coords.pop_back();
-	size_t area{};
+	uint64_t area{};
 
 	for (int i{}; i < coords.size() - 1; ++i)
 	{
@@ -285,7 +284,7 @@ void part_2()
 
 	area /= 2;
 
-	size_t interior = area + 1 + boundary_length / 2;
+	uint64_t interior = area + 1 + boundary_length / 2;
 	std::cout << interior << std::endl;
 }
 
