@@ -5,6 +5,7 @@
 #include <string_view>
 #include <coroutine>
 #include <optional>
+#include <utility>
 
 
 class StringViewCoro
@@ -119,7 +120,7 @@ protected:
 	std::filesystem::path filename{};
 };
 
-class LineParser : public Parser
+class LineParser final : public Parser
 {
 public:
 	explicit LineParser(std::filesystem::path file) : Parser(file)
@@ -145,7 +146,7 @@ public:
 	~LineParser() final = default;
 };
 
-class DelimitedParser : public Parser
+class DelimitedParser final : public Parser
 {
 public:
 	DelimitedParser(std::filesystem::path file, char delim) : Parser(file), delim{ delim }
@@ -174,7 +175,7 @@ private:
 	char delim{};
 };
 
-class CharacterParser : public Parser
+class CharacterParser final : public Parser
 {
 public:
 	explicit CharacterParser(std::filesystem::path file) : Parser(file)
