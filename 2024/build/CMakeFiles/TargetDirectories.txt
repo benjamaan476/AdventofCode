@@ -1,0 +1,5 @@
+/home/bencrabbe/code/AdventofCode/2024/build/CMakeFiles/edit_cache.dir
+/home/bencrabbe/code/AdventofCode/2024/build/CMakeFiles/rebuild_cache.dir
+/home/bencrabbe/code/AdventofCode/2024/build/day_3/CMakeFiles/day_3.dir
+/home/bencrabbe/code/AdventofCode/2024/build/day_3/CMakeFiles/edit_cache.dir
+/home/bencrabbe/code/AdventofCode/2024/build/day_3/CMakeFiles/rebuild_cache.dir

@@ -1,0 +1,7 @@
+[
+{
+  "directory": "/home/bencrabbe/code/AdventofCode/2024/build/day_3",
+  "command": "/usr/bin/c++ -D_PROJECT_DIR_=\\\"/home/bencrabbe/code/AdventofCode/2024/day_3\\\"  -g -Wall -Wextra -Wpedantic -Werror -std=gnu++20 -o CMakeFiles/day_3.dir/main.cpp.o -c /home/bencrabbe/code/AdventofCode/2024/day_3/main.cpp",
+  "file": "/home/bencrabbe/code/AdventofCode/2024/day_3/main.cpp"
+}
+]
