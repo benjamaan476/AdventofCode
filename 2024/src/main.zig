@@ -1,5 +1,5 @@
 const std = @import("std");
-const day_6 = @import("day_6/main.zig");
+const day_6 = @import("day_7/main.zig");
 
 pub fn main() !void {
 
