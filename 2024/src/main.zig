@@ -1,5 +1,5 @@
 const std = @import("std");
-const day_6 = @import("day_10/main.zig");
+const day = @import("day_13/main.zig");
 
 pub fn main() !void {
 
@@ -10,14 +10,14 @@ pub fn main() !void {
         part = try std.fmt.parseInt(u8, arg, 10);
     }
     
-    const result = try day_6.day(part, false);
+    const result = try day.day(part, false);
     std.debug.print("Result: {}\n", .{result});
 }
 
 test "part 1" {
-    try std.testing.expectEqual(day_6.part_1_expected(), day_6.day(1, true));
+    try std.testing.expectEqual(day.part_1_expected(), day.day(1, true));
 }
 
 test "part 2" {
-    try std.testing.expectEqual(day_6.part_2_expected(), day_6.day(2, true));
+    try std.testing.expectEqual(day.part_2_expected(), day.day(2, true));
 }
