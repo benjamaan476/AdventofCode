@@ -7,7 +7,7 @@ fn split_data(comptime data: []const u8) std.mem.SplitIterator(u8, .scalar) {
     return std.mem.splitScalar(u8, trimmed_data, '\n');
 }
 
-pub fn day(part: u8, comptime is_test: bool) !u64 {
+pub fn day(part: u8, comptime is_test: bool) !i64 {
     const data = comptime if(is_test) test_data else real_data;
 
     if(part == 1) {
@@ -18,104 +18,129 @@ pub fn day(part: u8, comptime is_test: bool) !u64 {
     } else unreachable;
 }
 
-pub fn part_1_expected() u32 {
-    return 55312;
+pub fn part_1_expected() i64 {
+    return 480;
 }
 
-pub fn part_2_expected() u32 {
+pub fn part_2_expected() i64 {
     return 0;
 }
 
-fn digit_count(val: u64) u64 {
-    return std.math.log10(val) + 1;
+const Coordinate = struct {
+    x: i64,
+    y: i64,
+};
+
+fn gcd(a: i64, b: i64, x: *i64, y: *i64) i64 {
+    if(b == 0) {
+        x.* = 1;
+        y.* = 0;
+        return a;
+    }
+
+    var x1: i64 = 0;
+    var y1: i64 = 0;
+    const d = gcd(b, @rem(a,b), &x1, &y1);
+    x.* = y1;
+    y.* = x1 - y1 * (@divFloor(a,b));
+
+    return d;
 }
 
-fn split_digit(val: u64) [2]u64 {
-    var digits: [2]u64 = undefined;
-
-    const count = digit_count(val);
-    digits[0] = val / std.math.pow(u64, 10, count / 2);
-    digits[1] = val % std.math.pow(u64, 10, count / 2);
-    return digits;
-}
-
-fn part_1(comptime input_data: [] const u8) !u64 {
-    var total : u64 = 0;
+fn part_1(comptime input_data: [] const u8) !i64 {
+    var total : i64 = 0;
     var data = comptime split_data(input_data);
 
-    var stones = std.ArrayList(u64).init(std.heap.page_allocator);
-
-    var j: u32 = 0;
+    var games = std.ArrayList(struct {prize: Coordinate, a: Coordinate, b: Coordinate}).init(std.heap.page_allocator);
+    var j: i64 = 0;
+        var a_button: Coordinate = .{.x = 0, .y = 0};
+        var b_button: Coordinate = .{.x = 0, .y = 0};
     while(data.next()) |line| : (j += 1) {
-        var it = std.mem.tokenizeScalar(u8, line, ' ');
-        while(it.next()) |token| {
-            const stone = try std.fmt.parseInt(u32, token, 10);
-            try stones.append(stone);
+        var button_label: u8 = undefined;
+        if(std.mem.eql(u8, line,"")) {
+            continue;
+        }
+        if(line[0] == 'B') {
+            var token = std.mem.splitScalar(u8, line, ':');
+            const button = token.next().?;
+            button_label = button[button.len - 1];
+            var coords = token.next().?;
+
+            coords = std.mem.trim(u8, coords, " \t\n");
+            var xy = std.mem.splitScalar(u8, coords, ',');
+            if(button_label == 'A') {
+                var x = xy.next().?;
+                var y = xy.next().?;
+                a_button = .{.x = try std.fmt.parseInt(i64, x[2..], 10), .y = try std.fmt.parseInt(i64, y[2..], 10)};
+
+            } else if(button_label == 'B') {
+                var x = xy.next().?;
+                var y = xy.next().?;
+                b_button = .{.x = try std.fmt.parseInt(i64, x[2..], 10), .y = try std.fmt.parseInt(i64, y[2..], 10)};
+            }
+        } else if (line[0] == 'P') {
+            var token = std.mem.splitScalar(u8, line, ':');
+            _ = token.next();
+            var prize = token.next().?;
+            prize = std.mem.trim(u8, prize, " \t\n");
+            var xy = std.mem.splitScalar(u8, prize, ',');
+            var x = xy.next().?;
+            x = std.mem.trim(u8, x, " \t\n");
+            var y = xy.next().?;
+            y = std.mem.trim(u8, y, " \t\n");
+            const prize_x = try std.fmt.parseInt(i64, x[2..], 10);// + 10000000000000;
+            const prize_y = try std.fmt.parseInt(i64, y[2..], 10);// + 10000000000000;
+
+            try games.append(.{.prize = .{.x = prize_x, .y = prize_y}, .a = a_button, .b = b_button});
         }
     }
 
-    for(0..25) |i| {
-        _ = i;
-    var stones_next = std.ArrayList(u64).init(std.heap.page_allocator);
-    defer stones_next.deinit();
-    std.debug.print("{}\n", .{stones.items.len});
-        // std.debug.print("Stones: {any}\n", .{stones.items});
-    for(stones.items) |stone| {
-        if(stone == 0) {
-            try stones_next.append(1);
-        } else if (digit_count(stone) % 2 == 0) {
-            const split = split_digit(stone);
-            try stones_next.append(split[0]);
-            try stones_next.append(split[1]);
-        } else {
-            try stones_next.append(stone * 2024);
+    for(games.items) |game| {
+        var x0: i64 = 0;
+        var x1: i64 = 0;
+        var d = gcd(game.a.x, game.b.x, &x0, &x1);
+        if(@mod(game.prize.x, d) != 0) {
+            continue;
+        }
+
+        x0 = @divFloor(x0 * game.prize.x, d);
+        x1 = @divFloor(x1 * game.prize.x, d);
+
+        var i: i32 = -1000;
+        while(x0 < 0 or x1 < 0) : (i += 1){
+
+            x0 += i * @divFloor(game.b.x, d);
+            x1 -= i * @divFloor(game.a.x, d);
+            
+            std.debug.print("x0: {}, x1: {}\n", .{x0, x1});
+        }
+
+
+        std.debug.print("x0: {}, x1: {}\n", .{x0, x1});
+        var y0: i64 = 0;
+        var y1: i64 = 0;
+        d = gcd(game.a.y, game.b.y, &y0, &y1);
+        if(@mod(game.prize.y, d) != 0) {
+            continue;
+        }
+
+        if(x0 == y0 and x1 == y1) {
+            total += 1;
         }
     }
-    
-    stones.clearAndFree();
-    stones = try stones_next.clone();
-    }
-     
-    total = stones.items.len;
     return total;
 }
 
-fn blink(stone: u64, blinks_remaining: u32) u64 {
-    if(blinks_remaining == 0) {
-        return 1;
-    }
-    const new_count = blinks_remaining - 1;
 
-    if(stone == 0) {
-        return blink(1, new_count);
-    }
-    else if (digit_count(stone) % 2 == 0) {
-        const split = split_digit(stone);
-        return blink(split[0], new_count) + blink(split[1], new_count);
-    } else return blink(stone * 2024, new_count);
-}
-
-fn part_2(comptime input_data: []const u8) !u64 {
-    var total : u64 = 0;
+fn part_2(comptime input_data: []const u8) !i64 {
+    var total : i64 = 0;
     var data = comptime split_data(input_data);
 
-    var stones = std.ArrayList(u64).init(std.heap.page_allocator);
-
-    var j: u32 = 0;
+    var j: i64 = 0;
     while(data.next()) |line| : (j += 1) {
-        var it = std.mem.tokenizeScalar(u8, line, ' ');
-        while(it.next()) |token| {
-            const stone = try std.fmt.parseInt(u32, token, 10);
-            try stones.append(stone);
-        }
+        _ = line; 
     }
 
-    for(stones.items) |stone| {
-
-        std.debug.print("Blink\n", .{});
-        total += blink(stone, 75);
-        std.debug.print("Total: {}\n", .{total});
-    }
-     
+    total = 0;
     return total;
 }
