@@ -44,12 +44,10 @@ var width: u32 = 0;
 var height: u32 = 0;
 
 var walls = std.AutoHashMap(Coordinate, void).init(std.heap.page_allocator);
-    var boxes = std.AutoHashMap(Coordinate, void).init(std.heap.page_allocator);
-    var boxes_pair = std.AutoHashMap(Coordinate, void).init(std.heap.page_allocator);
+var boxes = std.AutoHashMap(Coordinate, void).init(std.heap.page_allocator);
+var boxes_pair = std.AutoHashMap(Coordinate, void).init(std.heap.page_allocator);
 
 fn move_boxes(x: i64, y: i64, direction: u2) void {
-    const is_wall = walls.contains(.{.x = x, .y = y});
-    if(is_wall) return;
 
     const is_box = boxes.contains(.{.x = x, .y = y});
     if(!is_box) return;
@@ -97,7 +95,7 @@ fn can_move(x: i64, y: i64, direction: u2) bool {
 
     const is_box = boxes.contains(.{.x = box_x, .y = box_y});
     if(!is_box) return true;
-    
+
     return can_move(box_x, box_y, direction);
 }
 
@@ -108,72 +106,171 @@ fn can_move_2(x: i64, y: i64, direction: u2) bool {
     if(direction == 0) {
         box_x = x;
         box_y = y - 1;
+
+        const is_wall = walls.contains(.{.x = box_x, .y = box_y});
+        if(is_wall) return false;
+
+        if(boxes.contains(.{.x = box_x, .y = box_y})) {
+            return can_move_2(box_x, box_y, direction) and can_move_2(box_x + 1, box_y, direction);
+        }
+        if (boxes_pair.contains(.{.x = box_x, .y = box_y})) {
+            return can_move_2(box_x - 1, box_y, direction) and can_move_2(box_x, box_y, direction);
+        }
+
     } else if(direction == 1) {
         box_x = x;
         box_y = y + 1;
+
+        const is_wall = walls.contains(.{.x = box_x, .y = box_y});
+        if(is_wall) return false;
+
+        if(boxes.contains(.{.x = box_x, .y = box_y})) {
+            return can_move_2(box_x, box_y, direction) and can_move_2(box_x + 1, box_y, direction);
+        }
+        if (boxes_pair.contains(.{.x = box_x, .y = box_y})) {
+            return can_move_2(box_x - 1, box_y, direction) and can_move_2(box_x, box_y, direction);
+        }
     } else if(direction == 2) {
         box_x = x - 1;
         box_y = y;
+
+        const is_wall = walls.contains(.{.x = box_x, .y = box_y});
+        if(is_wall) return false;
+
+        if (boxes_pair.contains(.{.x = box_x, .y = box_y})) {
+            return can_move_2(box_x - 1, box_y, direction);
+        }
     } else if(direction == 3) {
         box_x = x + 1;
         box_y = y;
+
+        const is_wall = walls.contains(.{.x = box_x, .y = box_y});
+        if(is_wall) return false;
+
+        if (boxes.contains(.{.x = box_x, .y = box_y})) {
+            return can_move_2(box_x + 1, box_y, direction);
+        }
     }
 
-    const is_wall = walls.contains(.{.x = box_x, .y = box_y});
-    if(is_wall) return false;
-
-    const is_box = (boxes.contains(.{.x = box_x, .y = box_y}) and boxes_pair.contains(.{.x = box_x + 1, .y = box_y})) or (boxes_pair.contains(.{.x = box_x, .y = box_y}) and boxes.contains(.{.x = box_x - 1, .y = box_y}));
-    if(!is_box) return true;
-    
-    return can_move_2(box_x, box_y, direction);
+    return true;
 }
 
-fn move_boxes_2(x: i64, y: i64, direction: u2) void {
+fn move_box(x: i64, y: i64, direction: u2) void {
+    var new_boxes = std.AutoHashMap(Coordinate, void).init(std.heap.page_allocator);
+    var new_pairs = std.AutoHashMap(Coordinate, void).init(std.heap.page_allocator);
+
+    move_boxes_2(&new_boxes, &new_pairs, x, y, direction);
+
+    var box_it = new_boxes.keyIterator();
+    while(box_it.next()) |box| {
+        // std.debug.print("Box: x: {}, y: {}\n", .{box.x, box.y});
+        boxes.put(box.*, {}) catch unreachable;
+    }
+
+    var pair_it = new_pairs.keyIterator();
+    while (pair_it.next()) |pair| {
+        // std.debug.print("Pair: x: {}, y: {}\n", .{pair.x, pair.y});
+        boxes_pair.put(pair.*, {}) catch unreachable;
+    }
+}
+
+
+fn move_boxes_2(new_boxes: *std.AutoHashMap(Coordinate, void), new_pairs: *std.AutoHashMap(Coordinate, void), x: i64, y: i64, direction: u2) void {
     const is_wall = walls.contains(.{.x = x, .y = y});
     if(is_wall) return;
 
-    const is_box = boxes.contains(.{.x = x, .y = y}) and boxes_pair.contains(.{.x = x + 1, .y = y});
-    const is_pair = boxes_pair.contains(.{.x = x, .y = y}) and boxes.contains(.{.x = x - 1, .y = y});
+    const is_box = boxes.contains(.{.x = x, .y = y});
+    const is_pair = boxes_pair.contains(.{.x = x, .y = y});
+    if(!is_box and !is_pair) return;
 
-    var box_x: i64 = x;
-    var box_y: i64 = y;
+    var box: Coordinate = .{.x = x, .y = y};
+    var pos: Coordinate = undefined;
+    if(direction == 0) {
+        pos = .{.x = 0, .y = -1};
+        if(is_box) {
+            _ = boxes.remove(box);
+            _ = boxes_pair.remove(box.plus(.{.x = 1, .y = 0}));
 
-    if(is_box) {
-        while(boxes.contains(.{.x = box_x, .y = box_y}) or boxes_pair.contains(.{.x = box_x, .y = box_y})) {
-            if(direction == 0) {
-                box_y -= 1;
-            } else if(direction == 1) {
-                box_y += 1;
-            } else if(direction == 2) {
-                box_x -= 1;
-            } else if(direction == 3) {
-                box_x += 1;
-            }
+            box.add(pos);
+
+            new_boxes.put(box, {}) catch unreachable;
+            new_pairs.put(box.plus(.{.x = 1, .y = 0}), {}) catch unreachable;
+
+            move_boxes_2(new_boxes, new_pairs, box.x, box.y, direction);
+            move_boxes_2(new_boxes, new_pairs, box.x + 1, box.y, direction);
+            return;
         }
+        if(is_pair) {
+            _ = boxes_pair.remove(box);
+            _ = boxes.remove(box.plus(.{.x = -1, .y = 0}));
 
-        _ = boxes.remove(.{.x = x, .y = y});
-        _ = boxes_pair.remove(.{.x = x + 1, .y = y});
+            box.add(pos);
 
-        boxes.put(.{.x = box_x, .y = box_y}, {}) catch unreachable;
-        boxes_pair.put(.{.x = box_x + 1, .y = box_y}, {}) catch unreachable;
-    } else if (is_pair) {
-        while(boxes_pair.contains(.{.x = box_x, .y = box_y}) or boxes.contains(.{.x = box_x, .y = box_y})) {
-            if(direction == 0) {
-                box_y -= 1;
-            } else if(direction == 1) {
-                box_y += 1;
-            } else if(direction == 2) {
-                box_x -= 1;
-            } else if(direction == 3) {
-                box_x += 1;
-            }
+            new_pairs.put(box, {}) catch unreachable;
+            new_boxes.put(box.plus(.{.x = -1, .y = 0}), {}) catch unreachable;
+
+            move_boxes_2(new_boxes, new_pairs, box.x, box.y, direction);
+            move_boxes_2(new_boxes, new_pairs, box.x - 1, box.y, direction);
+            return;
         }
-        _ = boxes.remove(.{.x = x - 1, .y = y});
-        _ = boxes_pair.remove(.{.x = x, .y = y});
+    } else if(direction == 1) {
+        pos = .{.x = 0, .y = 1};
+        if(is_box) {
+            _ = boxes.remove(box);
+            _ = boxes_pair.remove(box.plus(.{.x = 1, .y = 0}));
 
-        boxes.put(.{.x = box_x - 1, .y = box_y}, {}) catch unreachable;
-        boxes_pair.put(.{.x = box_x, .y = box_y}, {}) catch unreachable;
+            box.add(pos);
+
+            new_boxes.put(box, {}) catch unreachable;
+            new_pairs.put(box.plus(.{.x = 1, .y = 0}), {}) catch unreachable;
+
+            move_boxes_2(new_boxes, new_pairs, box.x, box.y, direction);
+            move_boxes_2(new_boxes, new_pairs, box.x + 1, box.y, direction);
+            return;
+        }
+        if(is_pair) {
+            _ = boxes_pair.remove(box);
+            _ = boxes.remove(box.plus(.{.x = -1, .y = 0}));
+
+            box.add(pos);
+
+            new_pairs.put(box, {}) catch unreachable;
+            new_boxes.put(box.plus(.{.x = -1, .y = 0}), {}) catch unreachable;
+
+            move_boxes_2(new_boxes, new_pairs, box.x, box.y, direction);
+            move_boxes_2(new_boxes, new_pairs, box.x - 1, box.y, direction);
+            return;
+        }
+    } else if(direction == 2) {
+        pos = .{.x = -1, .y = 0};
+        if(is_box) {
+            _ = boxes.remove(box);
+            new_boxes.put(box.plus(pos), {}) catch unreachable;
+        }
+        if(is_pair) {
+            _ = boxes_pair.remove(box);
+            new_pairs.put(box.plus(pos), {}) catch unreachable;
+
+        }
+        box.add(pos);
+        move_boxes_2(new_boxes, new_pairs, box.x, box.y, direction);
+        return;
+    } else if(direction == 3) {
+        pos = .{.x = 1, .y = 0};
+        if(is_box) {
+            _ = boxes.remove(box);
+            new_boxes.put(box.plus(pos), {}) catch unreachable;
+        }
+        if(is_pair) {
+            _ = boxes_pair.remove(box);
+            new_pairs.put(box.plus(pos), {}) catch unreachable;
+
+        }
+        box.add(pos);
+        move_boxes_2(new_boxes, new_pairs, box.x, box.y, direction);
+        return;
     }
+
 }
 
 fn part_1(comptime input_data: [] const u8) !u64 {
@@ -230,7 +327,6 @@ fn part_1(comptime input_data: [] const u8) !u64 {
             }
             _ = move_boxes(bot.x, bot.y, instruction);
         }
-    std.debug.print("Robot: x: {}, y: {}\n", .{bot.x, bot.y});
     }
 
     for(0..height) |y| {
@@ -243,7 +339,7 @@ fn part_1(comptime input_data: [] const u8) !u64 {
                 std.debug.print("O", .{});
             } else {
                 std.debug.print(".", .{});
-        }
+            }
         }
         std.debug.print("\n", .{});
     }
@@ -283,7 +379,7 @@ fn part_2(comptime input_data: []const u8) !u64 {
                 } else if(c == '@') {
                     bot = .{.x = @intCast(x), .y = @intCast(yy)};
                 }
-                    x += 2;
+                x += 2;
             }
             yy += 1;
         }
@@ -316,9 +412,9 @@ fn part_2(comptime input_data: []const u8) !u64 {
             } else if(instruction == 3) {
                 bot.x += 1;
             }
-            _ = move_boxes_2(bot.x, bot.y, instruction);
+            _ = move_box(bot.x, bot.y, instruction);
+            std.debug.print("Bot: x: {}, y: {}\n", .{bot.x, bot.y});
         }
-    std.debug.print("Robot: x: {}, y: {}\n", .{bot.x, bot.y});
     }
 
     for(0..height) |y| {
@@ -333,7 +429,7 @@ fn part_2(comptime input_data: []const u8) !u64 {
                 std.debug.print("]", .{});
             } else {
                 std.debug.print(".", .{});
-        }
+            }
         }
         std.debug.print("\n", .{});
     }
