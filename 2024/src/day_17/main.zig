@@ -226,28 +226,22 @@ fn part_2(comptime input_data: []const u8) !u64 {
     var cpu = Cpu{.register_a = 0, .register_b = register_b, .register_c = register_c, .program = program};
     cpu.init();
 
-    var i:u64 = 500030000000;
-    while(true) : (i += 1){
+    // var i:u64 = 0b110001001001001010001000000000000000000000000000;
+    var i:u64 = 0b110101110010010101000100000000000000000000000000;
+    // var i:u64 = 1610321;
 
-        if(!contains_three(i)) {
-            continue;
-        }
+    // const sl: [7]u3 = [_]u3{3, 1, 5, 5, 5, 3, 0};
+    while(true) : (i += 1){
 
         program_output.clearAndFree();
         cpu.reset(i);
         cpu.run();
 
-        std.debug.print("Iteration: {d}, ", .{i});
-        // std.debug.print("Output:\n", .{});
         for(program_output.items) |instr| {
             std.debug.print("{},", .{instr});
         }
         std.debug.print("\r", .{});
-        // std.debug.print("Program:\n", .{});
-        // for(program.items) |instr| {
-        //     std.debug.print("{},", .{instr});
-        // }
-        // std.debug.print("\n", .{});
+        // if(std.mem.eql(u3, program_output.items, &sl)) {
         if(std.mem.eql(u3, program_output.items, program.items)) {
             return i;
         }
