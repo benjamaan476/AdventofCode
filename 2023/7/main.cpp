@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <iostream>
 #include <array>
 #include <ranges>
@@ -216,7 +217,7 @@ struct hand
 			return lhs.type < rhs.type;
 		}
 
-		for (auto i{ 0 }; i < lhs.hand_s.size(); ++i)
+		for (size_t i{ 0 }; i < lhs.hand_s.size(); ++i)
 		{
 			auto lhs_val = rank_to_number(lhs.hand_s[i]);
 			auto rhs_val = rank_to_number(rhs.hand_s[i]);
